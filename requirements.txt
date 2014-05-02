@@ -1,0 +1,2 @@
+python-daemon==1.6
+BitTorrent-bencode==5.0.8.1
