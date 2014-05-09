@@ -136,6 +136,9 @@ class fileScan(rtorrentRPC):
 		# call our parent's constructor
 		rtorrentRPC.__init__(self, protocol, user, password, host, port, path)
 
+		# list of completed torrents [{'file': path, 'name': torrent_name}]
+		self.completed = []
+
 		# make sure we have a trailing slash
 		self.baseDir = baseDir
 		if self.baseDir[-1] != '/':
@@ -144,11 +147,9 @@ class fileScan(rtorrentRPC):
 	"""
 	Gets a list of completed torrents from the self.baseDir path.
 
-	return list of completed torrents [{'file': path, 'name': torrent_name}], None on connection issues
+	return True on success, None on connection issues
 	"""
-	def getCompleted(self):
-		completed = []
-
+	def updateCompleted(self):
 		try:
 			logging.info('Scanning for torrent files')
 			for root, dirs, files in os.walk(self.baseDir, followlinks=True):
@@ -160,22 +161,35 @@ class fileScan(rtorrentRPC):
 						logging.info('Skipping "%s", not a torrent file' % path)
 					else:
 						logging.debug('Hash for "%s" is "%s"' % (path, hash))
+
+						skip = False
+						for queued in self.completed:
+							if queued['file'] == path:
+								skip = True
+								break
+
+						if skip:
+							logging.debug('"%s" is already queued' % path)
+							continue
+
 						isCompleted = self.torrentComplete(hash)
 						if isCompleted == None:
 							return None
 
-						if isCompleted == True:
-							name = self.torrentName(hash)
-							if name == None:
-								return None
+						name = self.torrentName(hash)
+						if name == None:
+							return None
 
+						if isCompleted:
 							if name != False:
 								logging.info('"%s" is completed, adding to download list' % name)
-								completed.append({'file': path, 'name': name})
+								self.completed.append({'file': path, 'name': name})
+						else:
+							logging.info('Skipping "%s", not finished downloading' % name)
 		except:
 			return None
 
-		return completed
+		return True
 
 	"""
 	Get the torrent hash for a given filePath
@@ -197,7 +211,7 @@ class puller:
 	"""
 	Constructor
 
-	files list output from fileScan.getCompleted()
+	files list output from fileScan.completed
 	username string the username used to connect to the remote server
 	host string the location for the remote server
 	port string/int the port used to connect to the remote server
@@ -367,12 +381,11 @@ class loader:
 		try:
 			fileScanner = fileScan(baseDir=self.data['torrent_files'], protocol=self.data['xmlrpc']['transport'], user=self.data['xmlrpc']['user'], password=self.data['xmlrpc']['password'], host=self.data['xmlrpc']['host'], port=self.data['xmlrpc']['port'], path=self.data['xmlrpc']['path'])
 
-			completed = fileScanner.getCompleted()
-			if completed == None:
+			if fileScanner.updateCompleted() == None:
 				logging.warning('Nothing to parse due to connection issues')
 				return False
 			else:
-				pull = puller(files=completed, username=self.data['torrent_download']['user'], host=self.data['torrent_download']['host'], port=self.data['torrent_download']['port'], baseDir=self.data['torrent_download']['download_dir'], localDir=self.data['local_download_dir'], torrentDir=self.data['torrent_files'], watchDir=self.data['torrent_download']['watch_dir'])
+				pull = puller(files=fileScanner.completed, username=self.data['torrent_download']['user'], host=self.data['torrent_download']['host'], port=self.data['torrent_download']['port'], baseDir=self.data['torrent_download']['download_dir'], localDir=self.data['local_download_dir'], torrentDir=self.data['torrent_files'], watchDir=self.data['torrent_download']['watch_dir'])
 
 			return {'puller': pull, 'scanner': fileScanner}
 		except:
@@ -413,15 +426,9 @@ if __name__ == '__main__':
 			if parsing['puller'].clean():
 				break
 
-			if parsing['puller'].queuedItems() == 0 and parsing['puller'].freeChildren() > 0 and time.time() - lastParse > 600:
-				for item in parsing['scanner'].getCompleted():
-					running = False
-					for runningItem in parsing['puller'].processes:
-						if item == runningItem['info']:
-							running = True
-							break
-					if not running:
-						parsing['puller'].files.append(item)
+			if parsing['puller'].queuedItems() == 0 and parsing['puller'].freeChildren() > 0 and time.time() - lastParse > 300:
+				parsing['scanner'].updateCompleted()
+				lastParse = time.time()
 
 			time.sleep(1)
 
