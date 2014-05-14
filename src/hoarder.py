@@ -276,7 +276,14 @@ class puller:
 	def pull(self):
 		if self.queuedItems() == 0 or self.freeChildren() <= 0:
 			return False
+
 		file = self.files.pop(0)
+
+		# make sure this file isn't already being processed
+		for process in self.processes:
+			if process['info'] == file:
+				return False
+
 		command = 'rsync --inplace --partial --port=%s -rq %s@%s:%s %s' % (self.port, self.username, self.host, pipes.quote(pipes.quote(self.baseDir + file['name'])), pipes.quote(self.localDir + '.temp/'))
 		logging.info('Starting download for "%s"' % file['name'])
 		logging.debug('command: "%s"' % command)
@@ -363,6 +370,60 @@ class loader:
 		try:
 			data = open(self.configFile, 'rb').read()
 			self.data = json.loads(data)
+
+			if 'torrent_files' not in self.data:
+				logging.error('Missing torrent_files setting')
+				return False
+			if 'xmlrpc' not in self.data:
+				logging.error('Missing xmlrpc setting')
+				return False
+			if 'torrent_download' not in self.data:
+				logging.error('Missing torrent_download setting')
+				return False
+			if 'local_download_dir' not in self.data:
+				logging.error('Missing local_download_dir setting')
+				return False
+
+			if 'transport' not in self.data['xmlrpc']:
+				logging.error('Missing transport setting in xmlrpc')
+				return False
+			if 'user' not in self.data['xmlrpc']:
+				logging.error('Missing user setting in xmlrpc')
+				return False
+			if 'password' not in self.data['xmlrpc']:
+				logging.error('Missing password setting in xmlrpc')
+				return False
+			if 'host' not in self.data['xmlrpc']:
+				logging.error('Missing host setting in xmlrpc')
+				return False
+			if 'port' not in self.data['xmlrpc']:
+				logging.error('Missing port setting in xmlrpc')
+				return False
+			if 'path' not in self.data['xmlrpc']:
+				logging.error('Missing path setting in xmlrpc')
+				return False
+
+			if 'user' not in self.data['torrent_download']:
+				logging.error('Missing user setting in torrent_download')
+				return False
+			if 'host' not in self.data['torrent_download']:
+				logging.error('Missing host setting in torrent_download')
+				return False
+			if 'port' not in self.data['torrent_download']:
+				logging.error('Missing port setting in torrent_download')
+				return False
+			if 'download_dir' not in self.data['torrent_download']:
+				logging.error('Missing download_dir setting in torrent_download')
+				return False
+			if 'watch_dir' not in self.data['torrent_download']:
+				logging.error('Missing watch_dir setting in torrent_download')
+				return False
+			if 'children' in self.data['torrent_download']:
+				self.data['torrent_download']['children'] = int(self.data['torrent_download']['children'])
+			else:
+				logging.warning('Missing children setting in torrent_download, setting default to 2')
+				self.data['torrent_download']['children'] = 2
+
 			logging.info('Successfully loaded config from "%s"' % self.configFile)
 			return True
 		except:
@@ -385,7 +446,7 @@ class loader:
 				logging.warning('Nothing to parse due to connection issues')
 				return False
 			else:
-				pull = puller(files=fileScanner.completed, username=self.data['torrent_download']['user'], host=self.data['torrent_download']['host'], port=self.data['torrent_download']['port'], baseDir=self.data['torrent_download']['download_dir'], localDir=self.data['local_download_dir'], torrentDir=self.data['torrent_files'], watchDir=self.data['torrent_download']['watch_dir'])
+				pull = puller(files=fileScanner.completed, username=self.data['torrent_download']['user'], host=self.data['torrent_download']['host'], port=self.data['torrent_download']['port'], baseDir=self.data['torrent_download']['download_dir'], localDir=self.data['local_download_dir'], torrentDir=self.data['torrent_files'], watchDir=self.data['torrent_download']['watch_dir'], children=self.data['torrent_download']['children'])
 
 			return {'puller': pull, 'scanner': fileScanner}
 		except:

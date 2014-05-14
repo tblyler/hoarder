@@ -16,6 +16,7 @@
 		"watch_dir": "location that the remote server watches for new torrent files",
 		"user": "SSH username for remote server",
 		"host": "SSH host for remote server",
-		"port": "22"
+		"port": "22",
+		"children": "2"
 	}
 }
