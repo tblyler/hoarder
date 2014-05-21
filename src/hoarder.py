@@ -29,8 +29,8 @@ class rtorrentRPC:
 		# try to connect to the XMLRPC server
 		if not self.connect():
 			logging.warning('Indefinitely retrying to reconnect to "%s"' % self.connectString)
-			while True:
-				self.reconnect()
+			while not self.reconnect():
+				pass
 
 	"""
 	Determines if we are connected to the XMLRPC server
