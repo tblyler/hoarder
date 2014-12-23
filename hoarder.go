@@ -3,6 +3,7 @@ package main
 
 import (
 	"errors"
+	"flag"
 	"github.com/adampresley/sigint"
 	"io/ioutil"
 	"log"
@@ -214,8 +215,18 @@ func main() {
 		os.Exit(1)
 	})
 
+	var config_path string
+	flag.StringVar(&config_path, "config", "", "Location of the config file")
+	flag.Parse()
+
+	if config_path == "" {
+		log.Println("Missing argument for configuration file path")
+		flag.PrintDefaults()
+		os.Exit(1)
+	}
+
 	log.Println("Reading configuration file")
-	config, err := loadConfig("hoarder.conf")
+	config, err := loadConfig(config_path)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
