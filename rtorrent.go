@@ -15,28 +15,28 @@ import (
 	bencode "github.com/jackpal/bencode-go"
 )
 
-// Keeps track of a torrent file's and rtorrent's XMLRPC information.
+// Torrent Keeps track of a torrent file's and rtorrent's XMLRPC information.
 type Torrent struct {
 	path string
 	hash string
-	xml_user string
-	xml_pass string
-	xml_address string
+	xmlUser string
+	xmlPass string
+	xmlAddress string
 }
 
-// Create a new Torrent instance while computing its hash.
-func NewTorrent(xml_user string, xml_pass string, xml_address string, file_path string) (*Torrent, error) {
-	hash, err := getTorrentHash(file_path)
+// NewTorrent Create a new Torrent instance while computing its hash.
+func NewTorrent(xmlUser string, xmlPass string, xmlAddress string, filePath string) (*Torrent, error) {
+	hash, err := getTorrentHash(filePath)
 	if err != nil {
 		return nil, err
 	}
 
-	return &Torrent{file_path, hash, xml_user, xml_pass, xml_address}, nil
+	return &Torrent{filePath, hash, xmlUser, xmlPass, xmlAddress}, nil
 }
 
 // Compute the torrent hash for a given torrent file path returning an all caps sha1 hash as a string.
-func getTorrentHash(file_path string) (string, error) {
-	file, err := os.Open(file_path)
+func getTorrentHash(filePath string) (string, error) {
+	file, err := os.Open(filePath)
 	if err != nil {
 		return "", err
 	}
@@ -56,18 +56,18 @@ func getTorrentHash(file_path string) (string, error) {
 	var encoded bytes.Buffer
 	bencode.Marshal(&encoded, decoded["info"])
 
-	encoded_string := encoded.String()
+	encodedString := encoded.String()
 
 	hash := sha1.New()
-	io.WriteString(hash, encoded_string)
+	io.WriteString(hash, encodedString)
 
-	hash_string := strings.ToUpper(hex.EncodeToString(hash.Sum(nil)))
+	hashString := strings.ToUpper(hex.EncodeToString(hash.Sum(nil)))
 
-	return hash_string, nil
+	return hashString, nil
 }
 
 // Send a command and its argument to the rtorrent XMLRPC and get the response.
-func (t Torrent) xmlRpcSend (command string, arg string) (string, error) {
+func (t Torrent) xmlRPCSend (command string, arg string) (string, error) {
 	// This is hacky XML to send to the server
 	buf := []byte("<?xml version='1.0'?>\n" +
 	"<methodCall>\n" +
@@ -81,14 +81,14 @@ func (t Torrent) xmlRpcSend (command string, arg string) (string, error) {
 
 	buffer := bytes.NewBuffer(buf)
 
-	request, err := http.NewRequest("POST", t.xml_address, buffer)
+	request, err := http.NewRequest("POST", t.xmlAddress, buffer)
 	if err != nil {
 		return "", err
 	}
 
 	// Set the basic HTTP auth if we have a user or password
-	if t.xml_user != "" || t.xml_pass != "" {
-		request.SetBasicAuth(t.xml_user, t.xml_pass)
+	if t.xmlUser != "" || t.xmlPass != "" {
+		request.SetBasicAuth(t.xmlUser, t.xmlPass)
 	}
 
 	client := &http.Client{}
@@ -118,14 +118,14 @@ func (t Torrent) xmlRpcSend (command string, arg string) (string, error) {
 	return values[0][1], nil
 }
 
-// Get the torrent's name from rtorrent.
+// GetTorrentName Get the torrent's name from rtorrent.
 func (t Torrent) GetTorrentName() (string, error) {
-	return t.xmlRpcSend("d.get_name", t.hash)
+	return t.xmlRPCSend("d.get_name", t.hash)
 }
 
-// Get the completion status of the torrent from rtorrent.
+// GetTorrentComplete Get the completion status of the torrent from rtorrent.
 func (t Torrent) GetTorrentComplete() (bool, error) {
-	complete, err := t.xmlRpcSend("d.get_complete", t.hash)
+	complete, err := t.xmlRPCSend("d.get_complete", t.hash)
 	if err != nil {
 		return false, err
 	}

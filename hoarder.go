@@ -14,16 +14,16 @@ import (
 )
 
 // Load information from a given config file config_path
-func loadConfig(config_path string) (map[string]string, error) {
-	file, err := os.Open(config_path)
+func loadConfig(configPath string) (map[string]string, error) {
+	file, err := os.Open(configPath)
 	if err != nil {
-		log.Println("Failed to open configuration file " + config_path)
+		log.Println("Failed to open configuration file " + configPath)
 		return nil, err
 	}
 
 	data, err := ioutil.ReadAll(file)
 	if err != nil {
-		log.Println("Failed to read configuration file " + config_path)
+		log.Println("Failed to read configuration file " + configPath)
 		return nil, err
 	}
 
@@ -38,27 +38,30 @@ func loadConfig(config_path string) (map[string]string, error) {
 		}
 
 		// Ignore malformed lines
-		sep_position := strings.Index(line, ": \"")
-		if sep_position == -1 {
+		sepPosition := strings.Index(line, ": \"")
+		if sepPosition == -1 {
 			continue
 		}
 
-		config[line[:sep_position]] = line[sep_position + 3:len(line) - 1]
+		config[line[:sepPosition]] = line[sepPosition + 3:len(line) - 1]
 	}
 
 	return config, nil
 }
 
 // Checker routine to see if torrents are completed
-func checker(config map[string]string, checker_chan <- chan map[string]string, com chan <- error) error {
+func checker(config map[string]string, checkerChan <- chan map[string]string, com chan <- error) error {
 	for {
-		torrent_info := <-checker_chan
+		torrentInfo := <-checkerChan
 
-		log.Println("Started checking " + torrent_info["torrent_path"])
+		log.Println("Started checking " + torrentInfo["torrent_path"])
 
-		torrent, err := NewTorrent(config["xml_user"], config["xml_pass"], config["xml_address"], torrent_info["torrent_path"])
+		torrent, err := NewTorrent(config["xml_user"], config["xml_pass"], config["xml_address"], torrentInfo["torrent_path"])
 		if err != nil {
-			log.Println("Failed to initialize torrent for " + torrent_info["torrent_path"] + ": " + err.Error())
+			if !os.IsNotExist(err) {
+				log.Println("Failed to initialize torrent for " + torrentInfo["torrent_path"] + ": " + err.Error())
+			}
+
 			continue
 		}
 
@@ -67,26 +70,6 @@ func checker(config map[string]string, checker_chan <- chan map[string]string, c
 			log.Println("Failed to create a new sync: " + err.Error())
 			com <- err
 			return err
-		}
-
-		destination_torrent := filepath.Join(config["remote_torrent_dir"], filepath.Base(torrent.path))
-		exists, err := syncer.Exists(destination_torrent)
-		if err != nil {
-			log.Println("Failed to see if " + torrent_info["torrent_path"] + " already exists on the server: " + err.Error())
-			com <- err
-			return err
-		}
-
-		if !exists {
-			err = syncer.SendFiles(map[string]string{torrent.path: destination_torrent})
-			if err != nil {
-				log.Println("Failed to send " + torrent.path + " to the server: " + err.Error())
-				com <- err
-				return err
-			}
-
-			// continue because rtorrent more than likely will not finish the torrent by the next call
-			continue
 		}
 
 		completed, err := torrent.GetTorrentComplete()
@@ -105,47 +88,47 @@ func checker(config map[string]string, checker_chan <- chan map[string]string, c
 		if completed {
 			log.Println(name + " is completed, starting download now")
 
-			remote_download_path := filepath.Join(config["remote_download_dir"], name)
-			exists, err := syncer.Exists(remote_download_path)
+			remoteDownloadPath := filepath.Join(config["remote_download_dir"], name)
+			exists, err := syncer.Exists(remoteDownloadPath)
 			if err != nil {
-				log.Println("Failed to see if " + remote_download_path + " exists: " + err.Error())
+				log.Println("Failed to see if " + remoteDownloadPath + " exists: " + err.Error())
 				com <- err
 				return err
 			}
 
 			// file/dir to downlaod does not exist!
 			if !exists {
-				err = errors.New(remote_download_path + " does not exist on remote server")
+				err = errors.New(remoteDownloadPath + " does not exist on remote server")
 				com <- err
 				return err
 			}
 
-			completed_destination := filepath.Join(config["local_download_dir"], name)
+			completedDestination := filepath.Join(torrentInfo["local_download_dir"], name)
 
-			_, err = os.Stat(completed_destination)
+			_, err = os.Stat(completedDestination)
 			if err == nil {
-				err = errors.New(completed_destination + " already exists, not downloading")
+				err = errors.New(completedDestination + " already exists, not downloading")
 				continue
 			} else if !os.IsNotExist(err) {
-				log.Println("Failed to stat: " + completed_destination + ": " + err.Error())
+				log.Println("Failed to stat: " + completedDestination + ": " + err.Error())
 				com <- err
 				return err
 			}
 
-			err = syncer.GetPath(remote_download_path, config["temp_download_dir"])
+			err = syncer.GetPath(remoteDownloadPath, config["temp_download_dir"])
 			if err != nil {
-				log.Println("Failed to download " + remote_download_path + ": " + err.Error())
+				log.Println("Failed to download " + remoteDownloadPath + ": " + err.Error())
 				com <- err
 				return err
 			}
 
 			log.Println("Successfully downloaded " + name)
 
-			temp_destination := filepath.Join(config["temp_download_dir"], name)
+			tempDestination := filepath.Join(config["temp_download_dir"], name)
 
-			err = os.Rename(temp_destination, completed_destination)
+			err = os.Rename(tempDestination, completedDestination)
 			if err != nil {
-				log.Println("Failed to move " + temp_destination + " to " + completed_destination + ": " + err.Error())
+				log.Println("Failed to move " + tempDestination + " to " + completedDestination + ": " + err.Error())
 				com <- err
 				return err
 			}
@@ -166,38 +149,85 @@ func checker(config map[string]string, checker_chan <- chan map[string]string, c
 }
 
 // Scanner routine to see if there are new torrent_files
-func scanner(config map[string]string, checker_chan chan <- map[string]string, com chan <- error) error {
-	watch_dirs := map[string]string{config["local_torrent_dir"]: config["local_download_dir"]}
-	dir_contents, err := ioutil.ReadDir(config["local_torrent_dir"])
+func scanner(config map[string]string, checkerChan chan <- map[string]string, com chan <- error) error {
+	watchDirs := map[string]string{config["local_torrent_dir"]: config["local_download_dir"]}
+	dirContents, err := ioutil.ReadDir(config["local_torrent_dir"])
 
 	if err != nil {
 		com <- err
 		return err
 	}
 
-	for _, file := range dir_contents {
+	for _, file := range dirContents {
 		if file.IsDir() {
-			watch_dirs[filepath.Join(config["local_torrent_dir"], file.Name())] = filepath.Join(config["local_download_dir"], file.Name())
+			watchDirs[filepath.Join(config["local_torrent_dir"], file.Name())] = filepath.Join(config["local_download_dir"], file.Name())
 		}
 	}
 
+	uploaded := make(map[string]bool)
+	downloadingTorrentPath := ""
 	for {
-		for watch_dir, download_dir := range watch_dirs {
-			torrent_files, err := ioutil.ReadDir(watch_dir)
+		for watchDir, downloadDir := range watchDirs {
+			torrentFiles, err := ioutil.ReadDir(watchDir)
 			if err != nil {
 				com <- err
 				return err
 			}
 
-			for _, torrent_file := range torrent_files {
-				if torrent_file.IsDir() {
+			for _, torrentFile := range torrentFiles {
+				if torrentFile.IsDir() {
 					// skip because we don't do more than one level of watching
 					continue
 				}
 
-				checker_chan <- map[string]string{
-					"torrent_path": filepath.Join(watch_dir, torrent_file.Name()),
-					"local_download_dir": download_dir,
+				torrentPath := filepath.Join(watchDir, torrentFile.Name())
+
+				if !uploaded[torrentPath] {
+					syncer, err := NewSync("1", config["ssh_user"], config["ssh_pass"], config["ssh_server"], config["ssh_port"])
+					if err != nil {
+						log.Println("Failed to create a new sync: " + err.Error())
+						continue
+					}
+
+					destinationTorrent := filepath.Join(config["remote_torrent_dir"], filepath.Base(torrentPath))
+					exists, err := syncer.Exists(destinationTorrent)
+					if err != nil {
+						log.Println("Failed to see if " + torrentPath + " already exists on the server: " + err.Error())
+						continue
+					}
+
+					if exists {
+						uploaded[torrentPath] = true
+					} else {
+						err = syncer.SendFiles(map[string]string{torrentPath: destinationTorrent})
+						if err == nil {
+							log.Println("Successfully uploaded " + torrentPath + " to " + destinationTorrent)
+							uploaded[torrentPath] = true
+						} else {
+							log.Println("Failed to upload " + torrentPath + " to " + destinationTorrent + ": " + err.Error())
+						}
+
+						continue
+					}
+				}
+
+				downloadInfo := map[string]string{
+					"torrent_path": torrentPath,
+					"local_download_dir": downloadDir,
+				}
+
+				// try to send the info to the checker goroutine (nonblocking)
+				select {
+				case checkerChan <- downloadInfo:
+					// don't keep track of completed downloads in the uploaded map
+					if downloadingTorrentPath != "" {
+						delete(uploaded, downloadingTorrentPath)
+					}
+
+					downloadingTorrentPath = torrentPath
+					break
+				default:
+					break
 				}
 			}
 		}
@@ -215,18 +245,18 @@ func main() {
 		os.Exit(1)
 	})
 
-	var config_path string
-	flag.StringVar(&config_path, "config", "", "Location of the config file")
+	var configPath string
+	flag.StringVar(&configPath, "config", "", "Location of the config file")
 	flag.Parse()
 
-	if config_path == "" {
+	if configPath == "" {
 		log.Println("Missing argument for configuration file path")
 		flag.PrintDefaults()
 		os.Exit(1)
 	}
 
 	log.Println("Reading configuration file")
-	config, err := loadConfig(config_path)
+	config, err := loadConfig(configPath)
 	if err != nil {
 		log.Println(err)
 		os.Exit(1)
@@ -234,7 +264,7 @@ func main() {
 
 	log.Println("Successfully read configuration file")
 
-	checker_chan := make(chan map[string]string, 50)
+	checkerChan := make(chan map[string]string, 50)
 
 	if err != nil {
 		log.Println(err)
@@ -242,25 +272,27 @@ func main() {
 	}
 
 	log.Println("Starting the scanner routine")
-	scanner_com := make(chan error)
-	go scanner(config, checker_chan, scanner_com)
+	scannerCom := make(chan error)
+	go scanner(config, checkerChan, scannerCom)
 
 	log.Println("Starting the checker routine")
-	checker_com := make(chan error)
-	go checker(config, checker_chan, checker_com)
+	checkerCom := make(chan error)
+	go checker(config, checkerChan, checkerCom)
 
 	for {
 		select {
-		case err := <-scanner_com:
+		case err := <-scannerCom:
 			if err != nil {
 				log.Println("Scanner failed: " + err.Error())
 				os.Exit(1)
 			}
-		case err := <-checker_com:
+		case err := <-checkerCom:
 			if err != nil {
 				log.Println("Checker failed: " + err.Error())
 				os.Exit(1)
 			}
+		default:
+			break
 		}
 
 		time.Sleep(time.Second * 5)
