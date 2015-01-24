@@ -1,6 +1,8 @@
 // Configuration for Hoarder
 // All fields and values are necessary
 
+// Should Hoarder automatically restart when one of its processes errors? (default true if not set)
+restart_on_error: "true"
 // Username for XMLRPC
 xml_user: "testuser"
 // Password for XMLRPC

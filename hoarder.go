@@ -43,14 +43,14 @@ func loadConfig(configPath string) (map[string]string, error) {
 			continue
 		}
 
-		config[line[:sepPosition]] = line[sepPosition + 3:len(line) - 1]
+		config[line[:sepPosition]] = line[sepPosition+3 : len(line)-1]
 	}
 
 	return config, nil
 }
 
 // Checker routine to see if torrents are completed
-func checker(config map[string]string, checkerChan <- chan map[string]string, com chan <- error) error {
+func checker(config map[string]string, checkerChan <-chan map[string]string, com chan<- error) error {
 	for {
 		torrentInfo := <-checkerChan
 
@@ -66,6 +66,7 @@ func checker(config map[string]string, checkerChan <- chan map[string]string, co
 		}
 
 		syncer, err := NewSync(config["threads"], config["ssh_user"], config["ssh_pass"], config["ssh_server"], config["ssh_port"])
+		defer syncer.Close()
 		if err != nil {
 			log.Println("Failed to create a new sync: " + err.Error())
 			com <- err
@@ -142,6 +143,8 @@ func checker(config map[string]string, checkerChan <- chan map[string]string, co
 		} else {
 			log.Println(name + " is not completed, waiting for it to finish")
 		}
+
+		syncer.Close()
 	}
 
 	com <- nil
@@ -149,7 +152,7 @@ func checker(config map[string]string, checkerChan <- chan map[string]string, co
 }
 
 // Scanner routine to see if there are new torrent_files
-func scanner(config map[string]string, checkerChan chan <- map[string]string, com chan <- error) error {
+func scanner(config map[string]string, checkerChan chan<- map[string]string, com chan<- error) error {
 	watchDirs := map[string]string{config["local_torrent_dir"]: config["local_download_dir"]}
 	dirContents, err := ioutil.ReadDir(config["local_torrent_dir"])
 
@@ -186,6 +189,7 @@ func scanner(config map[string]string, checkerChan chan <- map[string]string, co
 					syncer, err := NewSync("1", config["ssh_user"], config["ssh_pass"], config["ssh_server"], config["ssh_port"])
 					if err != nil {
 						log.Println("Failed to create a new sync: " + err.Error())
+						syncer.Close()
 						continue
 					}
 
@@ -193,6 +197,7 @@ func scanner(config map[string]string, checkerChan chan <- map[string]string, co
 					exists, err := syncer.Exists(destinationTorrent)
 					if err != nil {
 						log.Println("Failed to see if " + torrentPath + " already exists on the server: " + err.Error())
+						syncer.Close()
 						continue
 					}
 
@@ -207,12 +212,15 @@ func scanner(config map[string]string, checkerChan chan <- map[string]string, co
 							log.Println("Failed to upload " + torrentPath + " to " + destinationTorrent + ": " + err.Error())
 						}
 
+						syncer.Close()
 						continue
 					}
+
+					syncer.Close()
 				}
 
 				downloadInfo := map[string]string{
-					"torrent_path": torrentPath,
+					"torrent_path":       torrentPath,
 					"local_download_dir": downloadDir,
 				}
 
@@ -239,10 +247,14 @@ func scanner(config map[string]string, checkerChan chan <- map[string]string, co
 	return nil
 }
 
+func die(exitCode int) {
+	log.Println("Quiting")
+	os.Exit(exitCode)
+}
+
 func main() {
 	sigint.ListenForSIGINT(func() {
-		log.Println("Quiting")
-		os.Exit(1)
+		die(1)
 	})
 
 	var configPath string
@@ -252,14 +264,14 @@ func main() {
 	if configPath == "" {
 		log.Println("Missing argument for configuration file path")
 		flag.PrintDefaults()
-		os.Exit(1)
+		die(1)
 	}
 
 	log.Println("Reading configuration file")
 	config, err := loadConfig(configPath)
 	if err != nil {
 		log.Println(err)
-		os.Exit(1)
+		die(1)
 	}
 
 	log.Println("Successfully read configuration file")
@@ -268,7 +280,7 @@ func main() {
 
 	if err != nil {
 		log.Println(err)
-		os.Exit(1)
+		die(1)
 	}
 
 	log.Println("Starting the scanner routine")
@@ -279,17 +291,36 @@ func main() {
 	checkerCom := make(chan error)
 	go checker(config, checkerChan, checkerCom)
 
+	restartOnError := true
+	if config["restart_on_error"] != "" {
+		restartOnError = config["restart_on_error"] == "true"
+	}
+
 	for {
 		select {
 		case err := <-scannerCom:
 			if err != nil {
 				log.Println("Scanner failed: " + err.Error())
-				os.Exit(1)
+
+				if restartOnError {
+					log.Println("Restarting scanner")
+					go scanner(config, checkerChan, scannerCom)
+				} else {
+					log.Println("Quiting due to scanner error")
+					die(1)
+				}
 			}
 		case err := <-checkerCom:
 			if err != nil {
 				log.Println("Checker failed: " + err.Error())
-				os.Exit(1)
+
+				if restartOnError {
+					log.Println("Restarting checker")
+					go checker(config, checkerChan, checkerCom)
+				} else {
+					log.Println("Quiting due to checker error")
+					die(1)
+				}
 			}
 		default:
 			break
