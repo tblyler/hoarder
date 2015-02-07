@@ -4,17 +4,15 @@ Uploads .torrent files from a local "blackhole" to a remote (SSH) rtorrent watch
 
 Requirements
 ------------
-Go
-
-Install
--------
-1. `go get github.com/tblyler/hoarder`
-2. `go install github.com/tblyler/hoarder`
+* bash
+* curl
+* rsync
+* scp
 
 Configuration
 -------------
-Make sure you make a copy of the conf file in the repo to suit your needs.
+Edit the variables at the top of hoarder.sh to your liking.
 
 Running
 -------
-After installation, just run the hoarder executable with the --config flag to specify where the config file is.
+Run hoarder.sh with bash
