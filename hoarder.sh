@@ -274,7 +274,7 @@ while true; do
 
 					# add the torrent to the queue if it is not already in the queue
 					if [[ ! ${TORRENT_QUEUE[${torrent_hash}]+_} ]]; then
-						$TORRENT_QUEUE[$torrent_hash]="${sub_file}"
+						TORRENT_QUEUE[$torrent_hash]="${sub_file}"
 					fi
 				fi
 			done
@@ -289,7 +289,7 @@ while true; do
 
 			# add the torrent to the queue if it is not already in the queue
 			if [[ ! ${TORRENT_QUEUE[${torrent_hash}]+_} ]]; then
-				$TORRENT_QUEUE[$torrent_hash]="${file}"
+				TORRENT_QUEUE[$torrent_hash]="${file}"
 			fi
 		fi
 	done
@@ -342,7 +342,7 @@ while true; do
 
 				# start the download and record the PID
 				rsync -hrvP --inplace "${SSH_USER}@${SSH_SERVER}:${SSH_SERVER_DOWNLOAD_PATH}/${torrent_name}" "${TORRENT_TMP_DOWNLOAD}/" &
-				${RUNNING_RSYNCS[${torrent_hash}]}=$!
+				RUNNING_RSYNCS[${torrent_hash}]=$!
 			fi
 		done
 	fi
