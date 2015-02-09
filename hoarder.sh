@@ -341,7 +341,7 @@ while true; do
 				fi
 
 				# start the download and record the PID
-				rsync -hrvP --inplace "${SSH_USER}@${SSH_SERVER}:${SSH_SERVER_DOWNLOAD_PATH}/${torrent_name}" "${TORRENT_TMP_DOWNLOAD}/" &
+				rsync -hrvP --inplace "${SSH_USER}@${SSH_SERVER}:${SSH_SERVER_DOWNLOAD_PATH}/${torrent_name}" "${TORRENT_TMP_DOWNLOAD}/" > /dev/null &
 				RUNNING_RSYNCS[${torrent_hash}]=$!
 			fi
 		done
@@ -351,7 +351,7 @@ while true; do
 	for torrent_hash in "${!RUNNING_RSYNCS[@]}"; do
 		pid=${RUNNING_RSYNCS[$torrent_hash]}
 		# check to see if the given PID is still running
-		if [[ `jobs | grep -c $pid` -eq 0 ]]; then
+		if ! kill -0 "${pid}" 2> /dev/null; then
 			# get the return code of the PID
 			wait $pid
 			return=$?
@@ -361,7 +361,7 @@ while true; do
 				if [[ $? ]]; then
 					final_location_dir="${TORRENT_DOWNLOAD}"
 					if [[ `dirname "${TORRENT_QUEUE[$torrent_hash]}"` != "${TORRENT_FILE_PATH}" ]]; then
-						final_location_dir="${final_location_dir}/$(basename `dirname "${TORRENT_FILE_PATH}"`)"
+						final_location_dir="${final_location_dir}/$(basename "`dirname "${TORRENT_QUEUE[$torrent_hash]}"`")"
 					fi
 
 					if [[ ! -d "${final_location_dir}" ]]; then
@@ -369,6 +369,7 @@ while true; do
 					fi
 
 					mv "${TORRENT_TMP_DOWNLOAD}/${torrent_name}" "${final_location_dir}/"
+					rm "${TORRENT_QUEUE[$torrent_hash]}"
 					unset TORRENT_QUEUE[$torrent_hash]
 				else
 					echo "Failed to get torrent name for ${TORRENT_QUEUE[$torrent_hash]}"
