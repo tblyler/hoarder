@@ -344,6 +344,7 @@ while true; do
 			fi
 
 			# start the download and record the PID
+			echo "Started download for ${torrent_name} (${TORRENT_QUEUE[$torrent_hash]})"
 			rsync -hrvP --inplace "${SSH_USER}@${SSH_SERVER}:\"${SSH_SERVER_DOWNLOAD_PATH}/${torrent_name}"\" "${TORRENT_TMP_DOWNLOAD}/" > /dev/null &
 			RUNNING_RSYNCS[${torrent_hash}]=$!
 		fi
