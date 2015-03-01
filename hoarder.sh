@@ -253,16 +253,15 @@ while true; do
 		echo "${TORRENT_FILE_PATH} Does not exist"
 		exit 1
 	fi
+	
+	OIFS="$IFS"
+	IFS=$'\n'
 	# enumerate the .torrent file directory
-	for file in `ls "${TORRENT_FILE_PATH}"`; do
-		# store the file/directory's full path
-		file="${TORRENT_FILE_PATH}/${file}"
+	for file in `find "${TORRENT_FILE_PATH}"`; do
 		# check if the path is a directory
 		if [[ -d "${file}" ]]; then
 			# enumerate the directory
-			for sub_file in `ls "${file}"`; do
-				# store the file/directory's full path
-				sub_file="${file}/${sub_file}"
+			for sub_file in `find "${file}" -type f`; do
 				# this is the furthest we will descend
 				if [[ -f "${sub_file}" ]]; then
 					# get the torrent hash for the .torrent file
@@ -293,6 +292,7 @@ while true; do
 			fi
 		fi
 	done
+	IFS="$OIFS"
 
 	# go through the torrent queue
 	for torrent_hash in "${!TORRENT_QUEUE[@]}"; do
@@ -317,35 +317,37 @@ while true; do
 		fi
 	done
 
-	# if the amount of running rsyncs is belwo the desire amount, run items from the queue
-	if [[ ${#RUNNING_RSYNCS[@]} -lt ${RSYNC_PROCESSES} ]]; then
-		for torrent_hash in "${!TORRENT_QUEUE[@]}"; do
-			# make sure this torrent is not already being downloaded
-			if [[ ${RUNNING_RSYNCS[${torrent_hash}]+_} ]]; then
-				continue
-			fi
+	# if the amount of running rsyncs is below the desire amount, run items from the queue
+	for torrent_hash in "${!TORRENT_QUEUE[@]}"; do
+		# break out of the loop if we added enough jobs already
+		if [[ ${#RUNNING_RSYNCS[@]} -ge ${RSYNC_PROCESSES} ]]; then
+			break
+		fi
+		# make sure this torrent is not already being downloaded
+		if [[ ${RUNNING_RSYNCS[${torrent_hash}]+_} ]]; then
+			continue
+		fi
 
-			# see if the torrent is finished downloading remotely
-			torrent_completed=`get_torrent_complete "${torrent_hash}"`
+		# see if the torrent is finished downloading remotely
+		torrent_completed=`get_torrent_complete "${torrent_hash}"`
+		if [[ ! $? ]]; then
+			echo "Failed to check if ${TORRENT_QUEUE[$torrent_hash]} is completed"
+			continue
+		fi
+
+		# the torrent is finished downloading remotely
+		if [[ "${torrent_completed}" -eq 1 ]]; then
+			torrent_name=`get_torrent_name "${torrent_hash}"`
 			if [[ ! $? ]]; then
-				echo "Failed to check if ${TORRENT_QUEUE[$torrent_hash]} is completed"
+				echo "Failed to get torrent name for ${TORRENT_QUEUE[$torrent_hash]}"
 				continue
 			fi
 
-			# the torrent is finished downloading remotely
-			if [[ "${torrent_completed}" -eq 1 ]]; then
-				torrent_name=`get_torrent_name "${torrent_hash}"`
-				if [[ ! $? ]]; then
-					echo "Failed to get torrent name for ${TORRENT_QUEUE[$torrent_hash]}"
-					continue
-				fi
-
-				# start the download and record the PID
-				rsync -hrvP --inplace "${SSH_USER}@${SSH_SERVER}:${SSH_SERVER_DOWNLOAD_PATH}/${torrent_name}" "${TORRENT_TMP_DOWNLOAD}/" > /dev/null &
-				RUNNING_RSYNCS[${torrent_hash}]=$!
-			fi
-		done
-	fi
+			# start the download and record the PID
+			rsync -hrvP --inplace "${SSH_USER}@${SSH_SERVER}:\"${SSH_SERVER_DOWNLOAD_PATH}/${torrent_name}"\" "${TORRENT_TMP_DOWNLOAD}/" > /dev/null &
+			RUNNING_RSYNCS[${torrent_hash}]=$!
+		fi
+	done
 
 	# checkup on the running rsyncs
 	for torrent_hash in "${!RUNNING_RSYNCS[@]}"; do
