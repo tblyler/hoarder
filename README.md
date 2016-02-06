@@ -4,7 +4,8 @@ Uploads .torrent files from a local "blackhole" to a remote (SSH) rtorrent watch
 
 Requirements
 ------------
-* bash
+* bash >= 4.0 (support for associative arrays)
+* python2
 * curl
 * rsync
 * scp
