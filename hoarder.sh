@@ -243,9 +243,9 @@ END
 }
 
 # keep track of the .torrent files to be downloaded
-declare -A TORRENT_QUEUE
+declare -a TORRENT_QUEUE
 # keep track of the rsyncs to download torrent data
-declare -A RUNNING_RSYNCS
+declare -a RUNNING_RSYNCS
 # run indefinitely
 while true; do
 	# check to make sure the path of the local .torrent files exists
@@ -253,7 +253,7 @@ while true; do
 		echo "${TORRENT_FILE_PATH} Does not exist"
 		exit 1
 	fi
-	
+
 	OIFS="$IFS"
 	IFS=$'\n'
 	# enumerate the .torrent file directory
