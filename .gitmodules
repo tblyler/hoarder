@@ -1,0 +1,3 @@
+[submodule "metainfo/vendor/github.com/anacrolix/torrent"]
+	path = metainfo/vendor/github.com/anacrolix/torrent
+	url = ssh://git@github.com/anacrolix/torrent.git
