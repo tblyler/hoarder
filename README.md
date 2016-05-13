@@ -4,7 +4,7 @@ Uploads .torrent files from a local "blackhole" to a remote (SSH) rtorrent watch
 # Installation
 ## Manual
 1. Install [Go](https://golang.org) for your Operating System
-2. Run `$ go get -u github.com/tblyler/hoarder/cmd`
+2. Run `$ go get -u github.com/tblyler/hoarder/cmd/hoarder`
 3. If your `GOPATH` is in your `PATH`, run `$ hoarder -config $PATH_TO_HOARDER_CONF`
 
 # Configuration
@@ -25,7 +25,7 @@ Ignore the keys that start with an underscore, they are comments.
     "rtorrent_password": "correct horse battery staple",
 
     "_ssh_username": "The ssh username to use for getting finished torrents from the remote host",
-    "ssh_username": "JohnDoe"
+    "ssh_username": "JohnDoe",
 
     "_SSH_AUTH_COMMENT": "You may choose to use an ssh key or ssh password. If both are supplied, the password will not be used.",
 

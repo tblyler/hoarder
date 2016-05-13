@@ -14,7 +14,7 @@ func main() {
 	configPath := flag.String("config", "", "path to the config file")
 	flag.Parse()
 
-	logger := log.New(os.Stdout, "hoarder", log.LstdFlags)
+	logger := log.New(os.Stdout, "hoarder ", log.LstdFlags)
 
 	if *configPath == "" {
 		logger.Println("Missing config path")
