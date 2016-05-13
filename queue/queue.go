@@ -297,12 +297,14 @@ func (q *Queue) Run(stop <-chan bool) {
 		}
 
 		for _, file := range files {
-			if file.IsDir() {
+			// skip directories or files that do not end with .torrent
+			if file.IsDir() || !strings.HasSuffix(file.Name(), ".torrent") {
 				continue
 			}
 
 			fullPath := filepath.Join(localPath, file.Name())
 
+			q.logger.Printf("Adding %s to download queue", fullPath)
 			err = q.addTorrentFilePath(fullPath)
 			if err != nil {
 				q.logger.Printf("Failed to add torrent at '%s' error '%s'", fullPath, err)
