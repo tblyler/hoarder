@@ -307,6 +307,8 @@ func (q *Queue) downloadTorrents(torrents []rtorrent.Torrent) {
 				}
 			}
 
+			q.logger.Printf("Successfully downloaded '%s' (%s)", torrent.Name, torrentFilePath)
+
 			q.lock.RUnlock()
 			q.lock.Lock()
 			delete(q.downloadQueue, torrent.Hash)
