@@ -235,7 +235,7 @@ func (q *Queue) downloadTorrents(torrents []rtorrent.Torrent) {
 		}
 
 		go func(torrentFilePath string, downloadPath string, torrent rtorrent.Torrent) {
-			q.logger.Printf("Downloading '%s' (%s) to '%s'", torrent.Name, torrentFilePath, downloadPath)
+			q.logger.Printf("Downloading '%s' (%s) to '%s' (%s)", torrent.Name, torrentFilePath, downloadPath, destDownloadPath)
 			err := q.sftpClient.Mirror(torrent.Path, downloadPath)
 			if err != nil {
 				q.logger.Printf("Failed to download '%s' to '%s' error '%s'", torrent.Path, downloadPath, err)
