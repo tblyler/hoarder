@@ -11,6 +11,7 @@ import (
 	"log"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"sync"
 	"time"
@@ -47,6 +48,42 @@ type Queue struct {
 	downloadQueue map[string]string
 	logger        *log.Logger
 	lock          sync.RWMutex
+}
+
+var prettyBytesValues = []int64{
+	1024,
+	1024 * 1024,
+	1024 * 1024 * 1024,
+	1024 * 1024 * 1024 * 1024,
+	1024 * 1024 * 1024 * 1024 * 1024,
+	1024 * 1024 * 1024 * 1024 * 1024 * 1024,
+}
+
+var prettyBytesNames = []string{
+	"KiB",
+	"MiB",
+	"GiB",
+	"TiB",
+	"PiB",
+	"EiB",
+}
+
+func prettyBytes(bytes int64) string {
+	output := strconv.FormatInt(bytes, 10) + "B"
+	for i, divisor := range prettyBytesValues {
+		newBytes := bytes / divisor
+		if newBytes > 1024 {
+			continue
+		}
+
+		if newBytes < 1 {
+			break
+		}
+
+		output = strconv.FormatInt(newBytes, 10) + prettyBytesNames[i]
+	}
+
+	return output
 }
 
 // NewQueue establishes all connections and watchers
@@ -235,7 +272,7 @@ func (q *Queue) downloadTorrents(torrents []rtorrent.Torrent) {
 		}
 
 		go func(torrentFilePath string, downloadPath string, torrent rtorrent.Torrent) {
-			q.logger.Printf("Downloading '%s' (%s) to '%s' (%s)", torrent.Name, torrentFilePath, downloadPath, destDownloadPath)
+			q.logger.Printf("Downloading '%s' (%s) to '%s' (%s) %s", torrent.Name, torrentFilePath, downloadPath, destDownloadPath, prettyBytes(int64(torrent.Size)))
 			err := q.sftpClient.Mirror(torrent.Path, downloadPath)
 			if err != nil {
 				q.logger.Printf("Failed to download '%s' to '%s' error '%s'", torrent.Path, downloadPath, err)
