@@ -50,7 +50,7 @@ type Queue struct {
 	lock          sync.RWMutex
 }
 
-var prettyBytesValues = []int64{
+var prettyBytesValues = []float64{
 	1024,
 	1024 * 1024,
 	1024 * 1024 * 1024,
@@ -68,8 +68,8 @@ var prettyBytesNames = []string{
 	"EiB",
 }
 
-func prettyBytes(bytes int64) string {
-	output := strconv.FormatInt(bytes, 10) + "B"
+func prettyBytes(bytes float64) string {
+	output := strconv.FormatFloat(bytes, 'f', 2, 64) + "B"
 	for i, divisor := range prettyBytesValues {
 		newBytes := bytes / divisor
 		if newBytes > 1024 {
@@ -80,7 +80,7 @@ func prettyBytes(bytes int64) string {
 			break
 		}
 
-		output = strconv.FormatInt(newBytes, 10) + prettyBytesNames[i]
+		output = strconv.FormatFloat(newBytes, 'f', 2, 64) + prettyBytesNames[i]
 	}
 
 	return output
@@ -272,7 +272,7 @@ func (q *Queue) downloadTorrents(torrents []rtorrent.Torrent) {
 		}
 
 		go func(torrentFilePath string, downloadPath string, torrent rtorrent.Torrent) {
-			q.logger.Printf("Downloading '%s' (%s) to '%s' (%s) %s", torrent.Name, torrentFilePath, downloadPath, destDownloadPath, prettyBytes(int64(torrent.Size)))
+			q.logger.Printf("Downloading '%s' (%s) to '%s' (%s) %s", torrent.Name, torrentFilePath, downloadPath, destDownloadPath, prettyBytes(float64(torrent.Size)))
 			err := q.sftpClient.Mirror(torrent.Path, downloadPath)
 			if err != nil {
 				q.logger.Printf("Failed to download '%s' to '%s' error '%s'", torrent.Path, downloadPath, err)
