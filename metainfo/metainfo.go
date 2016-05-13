@@ -13,5 +13,5 @@ func GetTorrentHashHexString(reader io.Reader) (string, error) {
 		return "", err
 	}
 
-	return strings.ToUpper(info.Info.Hash.HexString()), nil
+	return strings.ToUpper(info.Info.Hash().HexString()), nil
 }
