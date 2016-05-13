@@ -1,3 +1,4 @@
+[![Build Status](https://travis-ci.org/tblyler/hoarder.svg?branch=master)](https://travis-ci.org/tblyler/hoarder)
 # Hoarder
 Uploads .torrent files from a local "blackhole" to a remote (SSH) rtorrent watch folder. From there, rtorrent is polled over XMLRPC as to whether the torrent is completed. Finally, the files are downloaded over a multithreaded SSH connection and saved to the local machine. The blackhole is used as a queue and will have its .torrent files deleted.
 
