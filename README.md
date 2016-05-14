@@ -10,61 +10,58 @@ Uploads .torrent files from a local "blackhole" to a remote (SSH) rtorrent watch
 
 # Configuration
 ## Example
-Ignore the keys that start with an underscore, they are comments.
-```json
-{
-    "_rtorrent_addr": "The address to the rtorrent XMLRPC endpoint",
-    "rtorrent_addr": "mycoolrtorrentserver.com/XMLRPC",
+```yaml
+# The file mode to use for downloaded files and directories
+file_download_filemode: 0777
 
-    "_rtorrent_insecure_cert": "true to ignore the certificate authenticity; false to honor it",
-    "rtorrent_insecure_cert": false,
+# The correlation of .torrent file paths and where their contents should be downloaded to"
+watch_to_download_paths:
+  /home/tblyler/torrent_files/tv: /home/tblyler/Downloads/tv
+  /home/tblyler/torrent_files/movies: /home/tblyler/Downloads/movies
+  /home/tblyler/torrent_files: /home/tblyler/Downloads
 
-    "_torrent_username": "The HTTP Basic auth username to use for rtorrent's XMLRPC",
-    "rtorrent_username": "JohnDoe",
+# The root path to temporarily download to and then move to the folder in the setting above. The destination path is created underneath the temp_download_path
+temp_download_path: /home/tblyler/tempDownloads
 
-    "_rtorrent_password": "The HTTP Basic auth password to use for rtorrent's XMLRPC",
-    "rtorrent_password": "correct horse battery staple",
+# If defined, the finished .torrent files finished are moved to their respected path here. Otherwise, they are deleted.
+watch_to_finish_path:
+  /home/tblyler/torrent_files/tv: /home/tblyler/completed_torrent_files/tv
+  /home/tblyler/torrent_files: /home/tblyler/completed_torrent_files
 
-    "_ssh_username": "The ssh username to use for getting finished torrents from the remote host",
-    "ssh_username": "JohnDoe",
+# The time in nano seconds to update the list of torrents and their statuses in rTorrent
+rtorrent_update_interval: 60000000000
 
-    "_SSH_AUTH_COMMENT": "You may choose to use an ssh key or ssh password. If both are supplied, the password will not be used.",
+# The number of concurrent completed torrent downloads to have at one time
+download_jobs: 2
 
-    "_ssh_password": "The SSH password to use for SSH authentication",
-    "ssh_password": "correct horse battery staple SSH",
+rtorrent:
+  # The address to the rtorrent XMLRPC endpoint
+  addr: mycoolrtorrentserver.com/XMLRPC
 
-    "_ssh_privkey_path": "The path to the private SSH key for SSH authentication",
-    "ssh_privkey_path": "/home/tblyler/.ssh/id_rsa",
+  # true to ignore the certificate authenticity; false to honor it
+  insecure_cert: false
 
-    "_ssh_addr": "The SSH address to connect to",
-    "ssh_addr": "mysshserver.com:22",
+  # The HTTP Basic auth username to use for rtorrent's XMLRPC
+  username: JohnDoe
 
-    "_ssh_connect_timeout": "The time in nano seconds to wait for an SSH connection attempt",
-    "ssh_connect_timeout": 30000000000,
+  # The HTTP Basic auth password to use for rtorrent's XMLRPC
+  password: "correct horse battery staple"
 
-    "_file_download_filemode": "The base 10 file mode to use for downloaded files",
-    "file_download_filemode": 511,
+ssh:
+  # The ssh username to use for getting finished torrents from the remote host
+  username: JohnDoe
 
-    "_watch_to_download_paths": "The correlation of .torrent file paths and where their contents should be downloaded to",
-    "watch_to_download_paths": {
-        "/home/tblyler/torrent_files/tv": "/home/tblyler/Downloads/tv",
-        "/home/tblyler/torrent_files/movies": "/home/tblyler/Downloads/movies",
-        "/home/tblyler/torrent_files": "/home/tblyler/Downloads"
-    },
+  # You may choose to use an ssh key or ssh password. If both are supplied, the password will not be used.
 
-    "_temp_download_path": "The root path to temporarily download to and then move to the folder in the setting above. The destination path is created underneath the temp_download_path",
-    "temp_download_path": "/home/tblyler/tempDownloads",
+  # The SSH password to use for SSH authentication
+  password: "correct horse battery staple SSH"
 
-    "_watch_to_finish_path": "If defined, the finished .torrent files finished are moved to their respected path here. Otherwise, they are deleted.",
-    "watch_to_finish_path": {
-        "/home/tblyler/torrent_files/tv": "/home/tblyler/completed_torrent_files/tv",
-        "/home/tblyler/torrent_files": "/home/tblyler/completed_torrent_files"
-    },
+  # The path to the private SSH key for SSH authentication
+  privkey_path: /home/tblyler/.ssh/id_rsa
 
-    "_rtorrent_update_interval": "The time in nano seconds to update the list of torrents and their statuses in rTorrent",
-    "rtorrent_update_interval": 300000000000,
+  # The SSH address to connect to
+  addr: "mysshserver.com:22"
 
-    "_download_jobs": "The number of concurrent download streams to have at one time",
-    "download_jobs": 2
-}
+  # The time in nano seconds to wait for an SSH connection attempt
+  connect_timeout: 30000000000
 ```

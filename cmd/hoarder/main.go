@@ -1,9 +1,9 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"github.com/tblyler/hoarder/queue"
+	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
 	"os"
@@ -28,7 +28,7 @@ func main() {
 	}
 
 	config := &queue.Config{}
-	err = json.Unmarshal(configRaw, config)
+	err = yaml.Unmarshal(configRaw, config)
 	if err != nil {
 		logger.Printf("Unable to decode config json at '%s': '%s'", *configPath, err)
 		os.Exit(1)

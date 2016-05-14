@@ -19,21 +19,27 @@ import (
 
 // Config defines the settings for watching, uploading, and downloading
 type Config struct {
-	RtorrentAddr              string            `json:"rtorrent_addr"`
-	RtorrentInsecureCert      bool              `json:"rtorrent_insecure_cert"`
-	RtorrentUsername          string            `json:"rtorrent_username"`
-	RtorrentPassword          string            `json:"rtorrent_password"`
-	SSHUsername               string            `json:"ssh_username"`
-	SSHPassword               string            `json:"ssh_password"`
-	SSHKeyPath                string            `json:"ssh_privkey_path"`
-	SSHAddr                   string            `json:"ssh_addr"`
-	SSHTimeout                time.Duration     `json:"ssh_connect_timeout"`
-	DownloadFileMode          os.FileMode       `json:"file_download_filemode"`
-	WatchDownloadPaths        map[string]string `json:"watch_to_download_paths"`
-	TempDownloadPath          string            `json:"temp_download_path"`
-	FinishedTorrentFilePath   map[string]string `json:"watch_to_finish_path"`
-	TorrentListUpdateInterval time.Duration     `json:"rtorrent_update_interval"`
-	ConcurrentDownloads       uint              `json:"download_jobs"`
+	Rtorrent struct {
+		Addr         string `json:"addr" yaml:"addr"`
+		InsecureCert bool   `json:"insecure_cert" yaml:"insecure_cert"`
+		Username     string `json:"username" yaml:"username"`
+		Password     string `json:"password" yaml:"password"`
+	} `json:"rtorrent" yaml:"rtorrent,flow"`
+
+	SSH struct {
+		Username string        `json:"username" yaml:"username"`
+		Password string        `json:"password" yaml:"password"`
+		KeyPath  string        `json:"privkey_path" yaml:"privkey_path"`
+		Addr     string        `json:"addr" yaml:"addr"`
+		Timeout  time.Duration `json:"connect_timeout" yaml:"connect_timeout"`
+	} `json:"ssh" yaml:"ssh,flow"`
+
+	DownloadFileMode          os.FileMode       `json:"file_download_filemode" yaml:"file_download_filemode"`
+	WatchDownloadPaths        map[string]string `json:"watch_to_download_paths" yaml:"watch_to_download_paths,flow"`
+	TempDownloadPath          string            `json:"temp_download_path" yaml:"temp_download_path"`
+	FinishedTorrentFilePath   map[string]string `json:"watch_to_finish_path" yaml:"watch_to_finish_path,flow"`
+	TorrentListUpdateInterval time.Duration     `json:"rtorrent_update_interval" yaml:"rtorrent_update_interval"`
+	ConcurrentDownloads       uint              `json:"download_jobs" yaml:"download_jobs"`
 }
 
 // Queue watches the given folders for new .torrent files,
@@ -116,15 +122,15 @@ func NewQueue(config *Config, logger *log.Logger) (*Queue, error) {
 		}
 	}
 
-	rtClient := rtorrent.New(config.RtorrentAddr, config.RtorrentInsecureCert)
-	rtClient.SetAuth(config.RtorrentUsername, config.RtorrentPassword)
+	rtClient := rtorrent.New(config.Rtorrent.Addr, config.Rtorrent.InsecureCert)
+	rtClient.SetAuth(config.Rtorrent.Username, config.Rtorrent.Password)
 
 	sftpClient, err := easysftp.Connect(&easysftp.ClientConfig{
-		Username: config.SSHUsername,
-		Password: config.SSHPassword,
-		KeyPath:  config.SSHKeyPath,
-		Host:     config.SSHAddr,
-		Timeout:  config.SSHTimeout,
+		Username: config.SSH.Username,
+		Password: config.SSH.Password,
+		KeyPath:  config.SSH.KeyPath,
+		Host:     config.SSH.Addr,
+		Timeout:  config.SSH.Timeout,
 		FileMode: config.DownloadFileMode,
 	})
 	if err != nil {
