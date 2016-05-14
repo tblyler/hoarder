@@ -165,10 +165,6 @@ func (q *Queue) Close() []error {
 }
 
 func (q *Queue) updateTorrentList() error {
-	// lock for torrentList
-	q.lock.Lock()
-	defer q.lock.Unlock()
-
 	torrents, err := q.rtClient.GetTorrents(rtorrent.ViewMain)
 	if err != nil {
 		return err
@@ -206,15 +202,14 @@ func (q *Queue) addTorrentFilePath(path string) error {
 }
 
 func (q *Queue) getFinishedTorrents() []rtorrent.Torrent {
-	// lock for torrentList
 	q.lock.RLock()
-	defer q.lock.RUnlock()
-
 	torrents := []rtorrent.Torrent{}
 	for hash, torrentPath := range q.downloadQueue {
 		torrent, exists := q.torrentList[hash]
 		if !exists {
+			q.lock.RUnlock()
 			err := q.addTorrentFilePath(torrentPath)
+			q.lock.RLock()
 			if err != nil {
 				q.logger.Printf("Unable to add torrent '%s' error '%s'", torrentPath, err)
 			}
@@ -233,7 +228,6 @@ func (q *Queue) getFinishedTorrents() []rtorrent.Torrent {
 }
 
 func (q *Queue) downloadTorrents(torrents []rtorrent.Torrent) {
-	// lock for downloadQueue
 	q.lock.RLock()
 	defer q.lock.RUnlock()
 
@@ -338,6 +332,7 @@ func (q *Queue) downloadTorrents(torrents []rtorrent.Torrent) {
 			q.lock.Lock()
 			delete(q.downloadQueue, finishedHash)
 			q.lock.Unlock()
+			q.lock.RLock()
 		}
 
 		running--
@@ -370,30 +365,18 @@ func (q *Queue) Run(stop <-chan bool) {
 	}
 
 	go func() {
-		err := q.updateTorrentList()
-		if err != nil {
-			q.logger.Printf("Failed to update torrent list from rTorrent: '%s'", err)
-		}
-
-		if q.config.TorrentListUpdateInterval == 0 {
-			time.Sleep(time.Minute)
-		} else {
-			time.Sleep(q.config.TorrentListUpdateInterval)
-		}
-	}()
-
-	go func() {
+		lastUpdateTime := time.Time{}
 		for {
-			downloadTorrents := []rtorrent.Torrent{}
-			for torrentHash := range q.downloadQueue {
-				torrent, exists := q.torrentList[torrentHash]
-				if !exists && !torrent.Completed {
-					continue
+			if time.Now().Sub(lastUpdateTime) >= q.config.TorrentListUpdateInterval {
+				err := q.updateTorrentList()
+				if err == nil {
+					lastUpdateTime = time.Now()
+				} else {
+					q.logger.Printf("Failed to update torrent list from rTorrent: '%s'", err)
 				}
-
-				downloadTorrents = append(downloadTorrents, torrent)
 			}
 
+			downloadTorrents := q.getFinishedTorrents()
 			if len(downloadTorrents) > 0 {
 				q.downloadTorrents(downloadTorrents)
 			}
