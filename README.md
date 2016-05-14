@@ -34,6 +34,9 @@ rtorrent_update_interval: 60000000000
 # The number of concurrent completed torrent downloads to have at one time
 download_jobs: 2
 
+# Whether or not to attempt to resume a previously interrupted download
+resume_downloads: true
+
 rtorrent:
   # The address to the rtorrent XMLRPC endpoint
   addr: mycoolrtorrentserver.com/XMLRPC

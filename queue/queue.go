@@ -40,6 +40,7 @@ type Config struct {
 	FinishedTorrentFilePath   map[string]string `json:"watch_to_finish_path" yaml:"watch_to_finish_path,flow"`
 	TorrentListUpdateInterval time.Duration     `json:"rtorrent_update_interval" yaml:"rtorrent_update_interval"`
 	ConcurrentDownloads       uint              `json:"download_jobs" yaml:"download_jobs"`
+	ResumeDownloads           bool              `json:"resume_downloads" yaml:"resume_downloads"`
 }
 
 // Queue watches the given folders for new .torrent files,
@@ -289,7 +290,7 @@ func (q *Queue) downloadTorrents(torrents []rtorrent.Torrent) {
 
 		go func(torrentFilePath string, downloadPath string, torrent rtorrent.Torrent) {
 			q.logger.Printf("Downloading '%s' (%s) to '%s' (%s) %s", torrent.Name, torrentFilePath, downloadPath, destDownloadPath, prettyBytes(float64(torrent.Size)))
-			err := q.sftpClient.Mirror(torrent.Path, downloadPath)
+			err := q.sftpClient.Mirror(torrent.Path, downloadPath, q.config.ResumeDownloads)
 			if err != nil {
 				q.logger.Printf("Failed to download '%s' to '%s' error '%s'", torrent.Path, downloadPath, err)
 				done <- ""
