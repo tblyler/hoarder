@@ -236,7 +236,9 @@ func (q *Queue) downloadTorrents(torrents []rtorrent.Torrent) {
 	q.lock.RLock()
 	defer q.lock.RUnlock()
 
-	done := make(chan bool, q.config.ConcurrentDownloads)
+	// this will keep track of the torrent hashes that have finished
+	// will return an empty string on a failed download
+	done := make(chan string, q.config.ConcurrentDownloads)
 	var running uint
 	for _, torrent := range torrents {
 		if !torrent.Completed {
@@ -251,7 +253,15 @@ func (q *Queue) downloadTorrents(torrents []rtorrent.Torrent) {
 		}
 
 		if running >= q.config.ConcurrentDownloads {
-			<-done
+			finishedHash := <-done
+			if finishedHash != "" {
+				q.lock.RUnlock()
+				q.lock.Lock()
+				delete(q.downloadQueue, finishedHash)
+				q.lock.Unlock()
+				q.lock.RLock()
+			}
+
 			running--
 		}
 
@@ -282,7 +292,7 @@ func (q *Queue) downloadTorrents(torrents []rtorrent.Torrent) {
 			err := q.sftpClient.Mirror(torrent.Path, downloadPath)
 			if err != nil {
 				q.logger.Printf("Failed to download '%s' to '%s' error '%s'", torrent.Path, downloadPath, err)
-				done <- false
+				done <- ""
 				return
 			}
 
@@ -294,7 +304,7 @@ func (q *Queue) downloadTorrents(torrents []rtorrent.Torrent) {
 				err = os.Rename(downFullPath, destFullPath)
 				if err != nil {
 					q.logger.Printf("Failed to move temp path '%s' to dest path '%s' error '%s'", downFullPath, destFullPath, err)
-					done <- false
+					done <- ""
 					return
 				}
 			}
@@ -315,18 +325,20 @@ func (q *Queue) downloadTorrents(torrents []rtorrent.Torrent) {
 
 			q.logger.Printf("Successfully downloaded '%s' (%s)", torrent.Name, torrentFilePath)
 
-			q.lock.RUnlock()
-			q.lock.Lock()
-			delete(q.downloadQueue, torrent.Hash)
-			q.lock.Unlock()
-			q.lock.RLock()
-			done <- true
+			done <- torrent.Hash
 		}(torrentFilePath, downloadPath, torrent)
 		running++
 	}
 
 	for running > 0 {
-		<-done
+		finishedHash := <-done
+		if finishedHash != "" {
+			q.lock.RUnlock()
+			q.lock.Lock()
+			delete(q.downloadQueue, finishedHash)
+			q.lock.Unlock()
+		}
+
 		running--
 	}
 }
