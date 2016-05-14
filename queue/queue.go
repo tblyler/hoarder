@@ -198,6 +198,11 @@ func (q *Queue) addTorrentFilePath(path string) error {
 
 	q.downloadQueue[torrentHash] = path
 
+	if _, exists := q.torrentList[torrentHash]; exists {
+		// the torrent is already on the server
+		return nil
+	}
+
 	return q.rtClient.AddTorrent(torrentData)
 }
 
@@ -210,7 +215,9 @@ func (q *Queue) getFinishedTorrents() []rtorrent.Torrent {
 			q.lock.RUnlock()
 			err := q.addTorrentFilePath(torrentPath)
 			q.lock.RLock()
-			if err != nil {
+			if err == nil {
+				q.logger.Printf("Added torrent '%s' to rTorrent", torrentPath)
+			} else {
 				q.logger.Printf("Unable to add torrent '%s' error '%s'", torrentPath, err)
 			}
 
@@ -358,7 +365,9 @@ func (q *Queue) Run(stop <-chan bool) {
 
 			q.logger.Printf("Adding %s to download queue", fullPath)
 			err = q.addTorrentFilePath(fullPath)
-			if err != nil {
+			if err == nil {
+				q.logger.Printf("Added torrent '%s' to rTorrent", fullPath)
+			} else {
 				q.logger.Printf("Failed to add torrent at '%s' error '%s'", fullPath, err)
 			}
 		}
@@ -401,7 +410,9 @@ func (q *Queue) Run(stop <-chan bool) {
 
 				q.logger.Printf("Adding %s to download queue", event.Name)
 				err = q.addTorrentFilePath(event.Name)
-				if err != nil {
+				if err == nil {
+					q.logger.Printf("Added torrent '%s' to rTorrent", event.Name)
+				} else {
 					q.logger.Printf("Failed to add '%s' error '%s'", event.Name, err)
 				}
 			}
