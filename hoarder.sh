@@ -261,7 +261,7 @@ while true; do
 		# check if the path is a directory
 		if [[ -d "${file}" ]]; then
 			# enumerate the directory
-			for sub_file in `find "${file}" -type f`; do
+			for sub_file in `find "${file}" -type f -name '*.torrent'`; do
 				# this is the furthest we will descend
 				if [[ -f "${sub_file}" ]]; then
 					# get the torrent hash for the .torrent file
@@ -278,7 +278,7 @@ while true; do
 				fi
 			done
 		# check that the path is a file
-		elif [[ -f "${file}" ]]; then
+		elif [[ -f "${file}" ]] && echo "${file}" | egrep -q '\.torrent$'; then
 			# get the torrent hash for the .torrent file
 			torrent_hash=`get_torrent_hash "${file}"`
 			if [[ ! $? ]]; then
