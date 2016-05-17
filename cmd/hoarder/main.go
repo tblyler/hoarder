@@ -9,6 +9,8 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"strconv"
+	"time"
 )
 
 var buildVersion = "Unknown"
@@ -20,6 +22,14 @@ func main() {
 	flag.Parse()
 
 	if *version {
+		dateUnix, err := strconv.ParseInt(buildDate, 10, 64)
+		if err == nil {
+			date := time.Unix(dateUnix, 0)
+			if !date.IsZero() {
+				buildDate = date.UTC().Format(time.UnixDate)
+			}
+		}
+
 		fmt.Printf("%s\n%s\n", buildVersion, buildDate)
 		os.Exit(0)
 	}

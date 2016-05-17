@@ -4,12 +4,12 @@ go:
         - 1.6
 
 env:
-        - DATE=$(date -u '+%Y/%m/%d %H:%M:%S') BUILD_VERSION=$(if [ -n $TRAVIS_TAG ]; then echo -n $TRAVIS_COMMIT; else echo -n $TRAVIS_TAG; fi)
+        - DATE=$(date '+%s') BUILD_VERSION='v0.1.0'
 
 before_install:
         - go get github.com/mitchellh/gox
         - go get github.com/tcnksm/ghr
 
 after_success:
-        - gox -ldflags "-X 'main.buildVersion=$BUILD_VERSION' -X 'main.buildDate=$DATE'" -output "dist/hoarder_{{.OS}}_{{.Arch}}" ./cmd/hoarder
-        - ghr --username tblyler --token $GITHUB_TOKEN --replace --prerelease --debug v0.1.0 dist/
+        - gox -ldflags "-X 'main.buildVersion=$BUILD_VERSION ($TRAVIS_COMMIT)' -X 'main.buildDate=$DATE'" -output "dist/hoarder_{{.OS}}_{{.Arch}}" ./cmd/hoarder
+        - ghr --username tblyler --token $GITHUB_TOKEN --replace --prerelease --debug $BUILD_VERSION dist/
