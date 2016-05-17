@@ -2,4 +2,12 @@ language: go
 
 go:
         - 1.6
-        - tip
+
+before_install:
+        - go get github.com/mitchellh/gox
+        - gox -build-toolchain
+        - go get github.com/tcnksm/ghr
+
+after_success:
+        - gox -ldflags "-X 'main.buildVersion=$(if [ -n $TRAVIS_TAG ]; then echo -n $TRAVIS_COMMIT; else echo -n $TRAVIS_TAG; fi)' -X 'main.buildDate=$(date -u +%Y/%m/%d %H:%M:%S)'"
+        - ghr -u tblyler -r $TRAVIS_REPO_SLUG --token $GITHUB_TOKEN --replace dist/
