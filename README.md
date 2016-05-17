@@ -8,6 +8,12 @@ Uploads .torrent files from a local "blackhole" to a remote (SSH) rtorrent watch
 2. Run `$ go get -u github.com/tblyler/hoarder/cmd/hoarder`
 3. If your `GOPATH` is in your `PATH`, run `$ hoarder -config $PATH_TO_HOARDER_CONF`
 
+## Precompiled
+1. Go to the [Hoarder releases page](https://github.com/tblyler/hoarder/releases)
+2. Look at whichever release you're interested in
+3. Download a precompiled binary for the given operating system of your choice
+4. Make the binary executable and run
+
 # Configuration
 ## Example
 ```yaml
