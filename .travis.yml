@@ -11,5 +11,5 @@ before_install:
         - go get github.com/tcnksm/ghr
 
 after_success:
-        - gox -ldflags "-X 'main.buildVersion=$BUILD_VERSION ($TRAVIS_COMMIT)' -X 'main.buildDate=$DATE'" -output "dist/hoarder_{{.OS}}_{{.Arch}}" ./cmd/hoarder
-        - ghr --username tblyler --token $GITHUB_TOKEN --replace --prerelease --debug $BUILD_VERSION dist/
+        - "[ \"${TRAVIS_PULL_REQUEST}\" = \"false\" ] && gox -ldflags \"-X 'main.buildVersion=${BUILD_VERSION} (${TRAVIS_COMMIT})' -X 'main.buildDate=${DATE}'\" -output \"dist/hoarder_{{.OS}}_{{.Arch}}\" ./cmd/hoarder || false"
+        - '[ "${TRAVIS_PULL_REQUEST}" = "false" ] && ghr --username tblyler --token "${GITHUB_TOKEN}" --replace --prerelease --debug "${BUILD_VERSION}" dist/ || false'
