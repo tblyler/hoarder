@@ -11,5 +11,5 @@ before_install:
         - go get github.com/tcnksm/ghr
 
 after_success:
-        - gox -ldflags "-X 'main.buildVersion=$BUILD_VERSION' -X 'main.buildDate=$DATE'"
+        - gox -ldflags "-X 'main.buildVersion=$BUILD_VERSION' -X 'main.buildDate=$DATE'" ./cmd/hoarder
         - ghr --username tblyler --token $GITHUB_TOKEN --replace --prerelease --debug pre-release dist/
