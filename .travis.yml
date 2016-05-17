@@ -4,8 +4,7 @@ go:
         - 1.6
 
 env:
-        - DATE=$(date -u '+%Y/%m/%d %H:%M:%S')
-        - BUILD_VERSION=$(if [ -n $TRAVIS_TAG ]; then echo -n $TRAVIS_COMMIT; else echo -n $TRAVIS_TAG; fi)
+        - DATE=$(date -u '+%Y/%m/%d %H:%M:%S') BUILD_VERSION=$(if [ -n $TRAVIS_TAG ]; then echo -n $TRAVIS_COMMIT; else echo -n $TRAVIS_TAG; fi)
 
 before_install:
         - go get github.com/mitchellh/gox
