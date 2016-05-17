@@ -4,7 +4,7 @@ go:
         - 1.6
 
 env:
-        - DATE=$(date '+%s')
+        - DATE=$(date '+%s') TAG="$(echo "${TRAVIS_BRANCH}" | sed 's/-prerelease//g')-prerelease"
 
 before_install:
         - go get github.com/mitchellh/gox
@@ -12,4 +12,4 @@ before_install:
 
 after_success:
         - "[ \"${TRAVIS_PULL_REQUEST}\" = \"false\" ] && gox -ldflags \"-X 'main.buildVersion=${BUILD_VERSION} (${TRAVIS_COMMIT})' -X 'main.buildDate=${DATE}'\" -output \"dist/hoarder_{{.OS}}_{{.Arch}}\" ./cmd/hoarder || false"
-        - '[ "${TRAVIS_PULL_REQUEST}" = "false" ] && ghr --username tblyler --token "${GITHUB_TOKEN}" --replace --prerelease --debug "${TRAVIS_BRANCH}-prerelease" dist/ || false'
+        - '[ "${TRAVIS_PULL_REQUEST}" = "false" ] && ghr --username tblyler --token "${GITHUB_TOKEN}" --replace --prerelease --debug "${TAG}" dist/ || false'
