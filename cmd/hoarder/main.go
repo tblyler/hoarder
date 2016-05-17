@@ -2,6 +2,7 @@ package main
 
 import (
 	"flag"
+	"fmt"
 	"github.com/tblyler/hoarder/queue"
 	"gopkg.in/yaml.v2"
 	"io/ioutil"
@@ -10,9 +11,18 @@ import (
 	"os/signal"
 )
 
+var buildVersion = "Unknown"
+var buildDate = "Unknown"
+
 func main() {
+	version := flag.Bool("version", false, "display version info")
 	configPath := flag.String("config", "", "path to the config file")
 	flag.Parse()
+
+	if *version {
+		fmt.Printf("%s\n%s\n", buildVersion, buildDate)
+		os.Exit(0)
+	}
 
 	logger := log.New(os.Stdout, "hoarder ", log.LstdFlags)
 
