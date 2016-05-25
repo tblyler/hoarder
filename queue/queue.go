@@ -399,8 +399,10 @@ func (q *Queue) Run(stop <-chan bool) {
 
 		if len(downloadsRunning) == 0 {
 			// close the sftp connection since it is not being used
-			q.sftpClient.Close()
-			q.sftpClient = nil
+			if q.sftpClient != nil {
+				q.sftpClient.Close()
+				q.sftpClient = nil
+			}
 		} else {
 			cont = true
 			for cont {
