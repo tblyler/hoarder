@@ -125,26 +125,35 @@ func NewQueue(config *Config, logger *log.Logger) (*Queue, error) {
 	rtClient := rtorrent.New(config.Rtorrent.Addr, config.Rtorrent.InsecureCert)
 	rtClient.SetAuth(config.Rtorrent.Username, config.Rtorrent.Password)
 
-	sftpClient, err := easysftp.Connect(&easysftp.ClientConfig{
-		Username: config.SSH.Username,
-		Password: config.SSH.Password,
-		KeyPath:  config.SSH.KeyPath,
-		Host:     config.SSH.Addr,
-		Timeout:  config.SSH.Timeout,
-		FileMode: config.DownloadFileMode,
-	})
-	if err != nil {
-		return nil, err
-	}
-
-	return &Queue{
+	q := &Queue{
 		rtClient:      rtClient,
-		sftpClient:    sftpClient,
+		sftpClient:    nil,
 		fsWatcher:     fsWatcher,
 		config:        config,
 		downloadQueue: make(map[string]string),
 		logger:        logger,
-	}, nil
+	}
+
+	sftpClient, err := q.newSftpClient()
+	if err != nil {
+		return nil, err
+	}
+
+	// the sftpClient connection was only made to verify settings
+	sftpClient.Close()
+
+	return q, nil
+}
+
+func (q *Queue) newSftpClient() (*easysftp.Client, error) {
+	return easysftp.Connect(&easysftp.ClientConfig{
+		Username: q.config.SSH.Username,
+		Password: q.config.SSH.Password,
+		KeyPath:  q.config.SSH.KeyPath,
+		Host:     q.config.SSH.Addr,
+		Timeout:  q.config.SSH.Timeout,
+		FileMode: q.config.DownloadFileMode,
+	})
 }
 
 // Close all of the connections and watchers
@@ -388,7 +397,11 @@ func (q *Queue) Run(stop <-chan bool) {
 			}
 		}
 
-		if len(downloadsRunning) > 0 {
+		if len(downloadsRunning) == 0 {
+			// close the sftp connection since it is not being used
+			q.sftpClient.Close()
+			q.sftpClient = nil
+		} else {
 			cont = true
 			for cont {
 				select {
@@ -417,6 +430,15 @@ func (q *Queue) Run(stop <-chan bool) {
 			for _, torrent := range q.getFinishedTorrents() {
 				if _, exists := downloadsRunning[torrent.Hash]; exists {
 					continue
+				}
+
+				if q.sftpClient == nil {
+					q.sftpClient, err = q.newSftpClient()
+					if err != nil {
+						q.logger.Println("Failed to connect to sftp: ", err)
+						q.sftpClient = nil
+						continue
+					}
 				}
 
 				go func(torrent rtorrent.Torrent, torrentPath string, hashChan chan<- string) {
