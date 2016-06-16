@@ -1,0 +1,30 @@
+[submodule "metainfo/vendor/github.com/anacrolix/missinggo"]
+	path = metainfo/vendor/github.com/anacrolix/missinggo
+	url = git://github.com/anacrolix/missinggo
+[submodule "metainfo/vendor/github.com/anacrolix/torrent"]
+	path = metainfo/vendor/github.com/anacrolix/torrent
+	url = git://github.com/anacrolix/torrent
+[submodule "metainfo/vendor/github.com/bradfitz/iter"]
+	path = metainfo/vendor/github.com/bradfitz/iter
+	url = git://github.com/bradfitz/iter
+[submodule "queue/vendor/github.com/anacrolix/missinggo"]
+	path = queue/vendor/github.com/anacrolix/missinggo
+	url = git://github.com/anacrolix/missinggo
+[submodule "queue/vendor/github.com/anacrolix/torrent"]
+	path = queue/vendor/github.com/anacrolix/torrent
+	url = git://github.com/anacrolix/torrent
+[submodule "queue/vendor/github.com/bradfitz/iter"]
+	path = queue/vendor/github.com/bradfitz/iter
+	url = git://github.com/bradfitz/iter
+[submodule "queue/vendor/github.com/fsnotify/fsnotify"]
+	path = queue/vendor/github.com/fsnotify/fsnotify
+	url = git://github.com/fsnotify/fsnotify
+[submodule "queue/vendor/github.com/kr/fs"]
+	path = queue/vendor/github.com/kr/fs
+	url = git://github.com/kr/fs
+[submodule "queue/vendor/github.com/pkg/sftp"]
+	path = queue/vendor/github.com/pkg/sftp
+	url = git://github.com/pkg/sftp
+[submodule "queue/vendor/github.com/tblyler/easysftp"]
+	path = queue/vendor/github.com/tblyler/easysftp
+	url = git://github.com/tblyler/easysftp
