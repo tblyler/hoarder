@@ -3,8 +3,8 @@ package main
 import (
 	"flag"
 	"fmt"
+	"github.com/go-yaml/yaml"
 	"github.com/tblyler/hoarder/queue"
-	"gopkg.in/yaml.v2"
 	"io/ioutil"
 	"log"
 	"os"

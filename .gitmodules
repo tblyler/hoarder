@@ -28,3 +28,6 @@
 [submodule "queue/vendor/github.com/tblyler/easysftp"]
 	path = queue/vendor/github.com/tblyler/easysftp
 	url = git://github.com/tblyler/easysftp
+[submodule "cmd/hoarder/vendor/github.com/go-yaml/yaml"]
+	path = cmd/hoarder/vendor/github.com/go-yaml/yaml
+	url = git://github.com/go-yaml/yaml
