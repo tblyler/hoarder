@@ -14,10 +14,14 @@ before_install:
         - go get github.com/mitchellh/gox
         - go get github.com/tcnksm/ghr
 
+# There are no tests at the moment :(
 script:
-        # There are no tests at the moment :(
-        - go version
+        - "[ \"${TRAVIS_PULL_REQUEST}\" = \"false\" ] && gox -ldflags \"-X 'main.buildVersion=${BUILD_VERSION} (${TRAVIS_COMMIT})' -X 'main.buildDate=${DATE}'\" -output \"dist/hoarder_{{.OS}}_{{.Arch}}\" ./cmd/hoarder || false"
 
 after_success:
-        - "[ \"${TRAVIS_PULL_REQUEST}\" = \"false\" ] && gox -ldflags \"-X 'main.buildVersion=${BUILD_VERSION} (${TRAVIS_COMMIT})' -X 'main.buildDate=${DATE}'\" -output \"dist/hoarder_{{.OS}}_{{.Arch}}\" ./cmd/hoarder || false"
         - '[ "${TRAVIS_PULL_REQUEST}" = "false" ] && ghr --username tblyler --token "${GITHUB_TOKEN}" --replace --prerelease --debug "${TAG}" dist/ || false'
+
+notifications:
+        email:
+                on_success: change
+                on_failure: change
