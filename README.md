@@ -45,7 +45,7 @@ resume_downloads: true
 
 rtorrent:
   # The address to the rtorrent XMLRPC endpoint
-  addr: mycoolrtorrentserver.com/XMLRPC
+  addr: https://mycoolrtorrentserver.com/XMLRPC
 
   # true to ignore the certificate authenticity; false to honor it
   insecure_cert: false
