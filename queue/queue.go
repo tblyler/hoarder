@@ -262,9 +262,9 @@ func dirSize(path string) (int64, error) {
 }
 
 /* Output looks like
-Errored.Download.mkv			      |                              |  (error: could not stat file)
 Totally.Legit.Download.x264-KILLERS   |===============>              |  (50%)
-ubuntu.13.37.iso  					  |===>		              		 |  ( 7%)
+ubuntu.13.37.iso                      |===>                          |  ( 7%)
+Errored.Download.mkv                  |                              |  (error: could not stat file)
 */
 func (q *Queue) getDownloadStatus(downloadsRunning map[string]downloadInfo) string {
 	// We use maps so that we can traverse in name order
