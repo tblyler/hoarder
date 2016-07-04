@@ -103,6 +103,17 @@ func prettyBytes(bytes float64) string {
 	return output
 }
 
+func newSftpClient(config *Config) (*easysftp.Client, error) {
+	return easysftp.Connect(&easysftp.ClientConfig{
+		Username: config.SSH.Username,
+		Password: config.SSH.Password,
+		KeyPath:  config.SSH.KeyPath,
+		Host:     config.SSH.Addr,
+		Timeout:  config.SSH.Timeout,
+		FileMode: config.DownloadFileMode,
+	})
+}
+
 // NewQueue establishes all connections and watchers
 func NewQueue(config *Config, logger *log.Logger) (*Queue, error) {
 	if config.WatchDownloadPaths == nil || len(config.WatchDownloadPaths) == 0 {
@@ -112,16 +123,6 @@ func NewQueue(config *Config, logger *log.Logger) (*Queue, error) {
 	if len(config.RPCSocketPath) == 0 {
 		return nil, errors.New("Must have queue.QueueConfig.RPCSocketPath set")
 	}
-
-	// Set up RPC
-	rpcQueue := make(chan RPCReq)
-	status := Status{rpcQueue}
-	rpc.Register(&status)
-	rpcSocket, err := net.Listen("unix", config.RPCSocketPath)
-	if err != nil {
-		return nil, err
-	}
-	go rpc.Accept(rpcSocket)
 
 	for watchPath, downloadPath := range config.WatchDownloadPaths {
 		config.WatchDownloadPaths[filepath.Clean(watchPath)] = filepath.Clean(downloadPath)
@@ -150,6 +151,24 @@ func NewQueue(config *Config, logger *log.Logger) (*Queue, error) {
 	rtClient := rtorrent.New(config.Rtorrent.Addr, config.Rtorrent.InsecureCert)
 	rtClient.SetAuth(config.Rtorrent.Username, config.Rtorrent.Password)
 
+	sftpClient, err := newSftpClient(config)
+	if err != nil {
+		return nil, err
+	}
+
+	// the sftpClient connection was only made to verify settings
+	sftpClient.Close()
+
+	// Set up RPC
+	rpcQueue := make(chan RPCReq)
+	status := Status{rpcQueue}
+	rpc.Register(&status)
+	rpcSocket, err := net.Listen("unix", config.RPCSocketPath)
+	if err != nil {
+		return nil, err
+	}
+	go rpc.Accept(rpcSocket)
+
 	q := &Queue{
 		rtClient:      rtClient,
 		sftpClient:    nil,
@@ -161,26 +180,7 @@ func NewQueue(config *Config, logger *log.Logger) (*Queue, error) {
 		rpcQueue:      rpcQueue,
 	}
 
-	sftpClient, err := q.newSftpClient()
-	if err != nil {
-		return nil, err
-	}
-
-	// the sftpClient connection was only made to verify settings
-	sftpClient.Close()
-
 	return q, nil
-}
-
-func (q *Queue) newSftpClient() (*easysftp.Client, error) {
-	return easysftp.Connect(&easysftp.ClientConfig{
-		Username: q.config.SSH.Username,
-		Password: q.config.SSH.Password,
-		KeyPath:  q.config.SSH.KeyPath,
-		Host:     q.config.SSH.Addr,
-		Timeout:  q.config.SSH.Timeout,
-		FileMode: q.config.DownloadFileMode,
-	})
 }
 
 // Close all of the connections and watchers
@@ -573,7 +573,7 @@ func (q *Queue) Run(stop <-chan bool) {
 				}
 
 				if q.sftpClient == nil {
-					q.sftpClient, err = q.newSftpClient()
+					q.sftpClient, err = newSftpClient(q.config)
 					if err != nil {
 						q.logger.Println("Failed to connect to sftp: ", err)
 						q.sftpClient = nil
