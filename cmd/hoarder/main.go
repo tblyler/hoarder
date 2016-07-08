@@ -62,7 +62,6 @@ func main() {
 			logger.Printf("Unable to open RPC socket file '%s': '%s'", config.RPCSocketPath, err)
 			os.Exit(1)
 		}
-		defer rpc.Close()
 
 		reply := ""
 		err = rpc.Call("Status.Downloads", &queue.RPCArgs{}, &reply)
@@ -76,6 +75,8 @@ func main() {
 		} else {
 			fmt.Println("No Downloads")
 		}
+
+		rpc.Close()
 		os.Exit(0)
 	}
 
