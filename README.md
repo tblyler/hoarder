@@ -43,6 +43,9 @@ download_jobs: 2
 # Whether or not to attempt to resume a previously interrupted download
 resume_downloads: true
 
+# Path to the unix socket file that hoarder uses for RPC
+rpc_socket_path: /tmp/hoarder.sock
+
 rtorrent:
   # The address to the rtorrent XMLRPC endpoint
   addr: https://mycoolrtorrentserver.com/XMLRPC
