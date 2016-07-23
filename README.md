@@ -46,6 +46,12 @@ resume_downloads: true
 # Path to the unix socket file that hoarder uses for RPC
 rpc_socket_path: /tmp/hoarder.sock
 
+# Whether or not to see if there is enough disk space before starting a download
+check_disk_space: true
+
+# (must have check_disk_space set to true) Minimum disk space to have after completed downloads (measured in bytes, 0 to disable check)
+min_disk_space: 5368709120
+
 rtorrent:
   # The address to the rtorrent XMLRPC endpoint
   addr: https://mycoolrtorrentserver.com/XMLRPC

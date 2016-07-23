@@ -31,3 +31,6 @@
 [submodule "cmd/hoarder/vendor/github.com/go-yaml/yaml"]
 	path = cmd/hoarder/vendor/github.com/go-yaml/yaml
 	url = git://github.com/go-yaml/yaml
+[submodule "queue/vendor/github.com/shirou/gopsutil"]
+	path = queue/vendor/github.com/shirou/gopsutil
+	url = https://github.com/shirou/gopsutil

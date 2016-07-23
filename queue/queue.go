@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/fsnotify/fsnotify"
+	"github.com/shirou/gopsutil/disk"
 	"github.com/tblyler/easysftp"
 	"github.com/tblyler/go-rtorrent/rtorrent"
 	"github.com/tblyler/hoarder/metainfo"
@@ -45,6 +46,8 @@ type Config struct {
 	TorrentListUpdateInterval time.Duration     `json:"rtorrent_update_interval" yaml:"rtorrent_update_interval"`
 	ConcurrentDownloads       uint              `json:"download_jobs" yaml:"download_jobs"`
 	ResumeDownloads           bool              `json:"resume_downloads" yaml:"resume_downloads"`
+	CheckDiskSpace            bool              `json:"check_disk_space" yaml:"check_disk_space"`
+	MinDiskSpace              uint64            `json:"min_disk_space" yaml:"min_disk_space"`
 }
 
 // Queue watches the given folders for new .torrent files,
@@ -582,6 +585,50 @@ func (q *Queue) Run(stop <-chan bool) {
 				}
 
 				torrentFilePath := q.downloadQueue[torrent.Hash]
+
+				skip := false
+				if q.config.CheckDiskSpace {
+					diskSpacePaths := []string{q.config.WatchDownloadPaths[filepath.Dir(torrentFilePath)]}
+
+					if q.config.TempDownloadPath != "" {
+						diskSpacePaths = append(diskSpacePaths, q.config.TempDownloadPath)
+					}
+
+					downloadSizes := uint64(torrent.Size)
+					for _, dTorrent := range downloadsRunning {
+						downloadSizes += uint64(dTorrent.size)
+					}
+
+					for _, path := range diskSpacePaths {
+						fsStat, err := disk.Usage(path)
+						if err != nil {
+							q.logger.Printf("Failed to check disk space on '%s' for '%s' (%s): %s", path, torrent.Name, torrentFilePath, err)
+							continue
+						}
+
+						if q.config.MinDiskSpace == 0 {
+							if fsStat.Free > downloadSizes {
+								continue
+							}
+
+							q.logger.Printf("Not downloading '%s' (%s) not enough disk space, only %d bytes free on '%s'", torrent.Name, torrentFilePath, fsStat.Free, path)
+							skip = true
+							break
+						} else {
+							if fsStat.Free > downloadSizes && (fsStat.Free-downloadSizes) > q.config.MinDiskSpace {
+								continue
+							}
+
+							q.logger.Printf("Not downloading '%s' (%s) minimum disk space (%d) reached on '%s'", torrent.Name, torrentFilePath, q.config.MinDiskSpace, path)
+							skip = true
+							break
+						}
+					}
+				}
+
+				if skip {
+					continue
+				}
 
 				go func(torrent rtorrent.Torrent, torrentPath string, hashChan chan<- string) {
 					err := q.downloadTorrent(torrent, torrentPath)
