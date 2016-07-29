@@ -21,6 +21,12 @@ import (
 	"time"
 )
 
+const (
+	// DefaultDiskSpaceBackoff denotes how long to wait before checking
+	// that the diskspace threshold is not longer being exceeded
+	DefaultDiskSpaceBackoff = time.Second * 30
+)
+
 // Config defines the settings for watching, uploading, and downloading
 type Config struct {
 	Rtorrent struct {
@@ -467,6 +473,7 @@ func (q *Queue) Run(stop <-chan bool) {
 	var err error
 	finished := false
 	lastUpdateTime := time.Time{}
+	diskSpaceBackOff := time.Now()
 	downloadedHashes := make(chan string, q.config.ConcurrentDownloads)
 	downloadsRunning := make(map[string]downloadInfo)
 	for {
@@ -569,7 +576,7 @@ func (q *Queue) Run(stop <-chan bool) {
 			}
 		}
 
-		if uint(len(downloadsRunning)) < q.config.ConcurrentDownloads {
+		if uint(len(downloadsRunning)) < q.config.ConcurrentDownloads && (!q.config.CheckDiskSpace || diskSpaceBackOff.Before(time.Now())) {
 			for _, torrent := range q.getFinishedTorrents() {
 				if _, exists := downloadsRunning[torrent.Hash]; exists {
 					continue
@@ -611,6 +618,7 @@ func (q *Queue) Run(stop <-chan bool) {
 								continue
 							}
 
+							diskSpaceBackOff = time.Now().Add(DefaultDiskSpaceBackoff)
 							q.logger.Printf("Not downloading '%s' (%s) not enough disk space, only %d bytes free on '%s'", torrent.Name, torrentFilePath, fsStat.Free, path)
 							skip = true
 							break
@@ -619,6 +627,7 @@ func (q *Queue) Run(stop <-chan bool) {
 								continue
 							}
 
+							diskSpaceBackOff = time.Now().Add(DefaultDiskSpaceBackoff)
 							q.logger.Printf("Not downloading '%s' (%s) minimum disk space (%d) reached on '%s'", torrent.Name, torrentFilePath, q.config.MinDiskSpace, path)
 							skip = true
 							break
